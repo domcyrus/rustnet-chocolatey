@@ -62,9 +62,35 @@ rustnet-chocolatey/
 └── README.md
 ```
 
+## Automated Workflows
+
+This repository includes GitHub Actions workflows that automate package maintenance:
+
+- **Daily Release Checks**: Automatically detects new RustNet releases
+- **Automated Updates**: Downloads binaries, calculates checksums, and creates PRs
+- **Automated Publishing**: Publishes to Chocolatey Community Repository on release
+
+See [.github/workflows/README.md](.github/workflows/README.md) for details.
+
+### Manual Package Update
+
+To manually update to a specific version:
+
+```bash
+# Trigger via GitHub Actions
+gh workflow run update-package.yml -f version=0.16.0
+
+# Or use the GitHub UI: Actions → Update RustNet Package → Run workflow
+```
+
 ## Publishing
 
-The package is automatically published to Chocolatey when a new release is created in the main RustNet repository.
+The package is automatically published to Chocolatey when a GitHub release is created in this repository.
+
+**Setup for automatic publishing:**
+1. Add `CHOCO_API_KEY` to repository secrets
+2. Get your API key from: https://community.chocolatey.org/account
+3. Create a release → Package publishes automatically
 
 ## License
 

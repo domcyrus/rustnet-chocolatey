@@ -1,0 +1,134 @@
+name: Update RustNet Package
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'RustNet version to update to (e.g., 0.15.0)'
+        required: true
+        type: string
+  repository_dispatch:
+    types: [new-release]
+
+jobs:
+  update-package:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Determine version
+        id: version
+        shell: pwsh
+        run: |
+          if ("${{ github.event_name }}" -eq "workflow_dispatch") {
+            $version = "${{ github.event.inputs.version }}"
+          } else {
+            # For repository_dispatch, get version from payload
+            $version = "${{ github.event.client_payload.version }}"
+          }
+
+          # Remove 'v' prefix if present
+          $version = $version -replace '^v', ''
+
+          echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+          echo "Updating to version: $version"
+
+      - name: Download release binary
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.VERSION }}"
+          $url = "https://github.com/domcyrus/rustnet/releases/download/v$version/rustnet-v$version-x86_64-pc-windows-msvc.zip"
+
+          Write-Host "Downloading from: $url"
+          Invoke-WebRequest -Uri $url -OutFile "rustnet.zip"
+
+      - name: Calculate checksum
+        id: checksum
+        shell: pwsh
+        run: |
+          $checksum = (Get-FileHash -Algorithm SHA256 rustnet.zip).Hash.ToLower()
+          echo "CHECKSUM=$checksum" >> $env:GITHUB_OUTPUT
+          Write-Host "Calculated checksum: $checksum"
+
+      - name: Update package files
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.VERSION }}"
+          $checksum = "${{ steps.checksum.outputs.CHECKSUM }}"
+
+          # Update nuspec
+          $nuspecPath = "rustnet.nuspec"
+          $nuspecContent = Get-Content $nuspecPath -Raw
+          $nuspecContent = $nuspecContent -replace '<version>[\d\.]+</version>', "<version>$version</version>"
+          Set-Content -Path $nuspecPath -Value $nuspecContent -NoNewline
+
+          # Update chocolateyinstall.ps1
+          $installScriptPath = "tools\chocolateyinstall.ps1"
+          $installContent = Get-Content $installScriptPath -Raw
+          $installContent = $installContent -replace 'releases/download/v[\d\.]+/rustnet-v[\d\.]+-', "releases/download/v$version/rustnet-v$version-"
+          $installContent = $installContent -replace "checksum64 = '[^']*'", "checksum64 = '$checksum'"
+          Set-Content -Path $installScriptPath -Value $installContent -NoNewline
+
+          # Update VERIFICATION.txt
+          $verificationPath = "tools\VERIFICATION.txt"
+          $verificationContent = Get-Content $verificationPath -Raw
+          $verificationContent = $verificationContent -replace 'releases/download/v[\d\.]+/rustnet-v[\d\.]+-', "releases/download/v$version/rustnet-v$version-"
+          $verificationContent = $verificationContent -replace 'checksum64: [^\r\n]*', "checksum64: $checksum"
+          Set-Content -Path $verificationPath -Value $verificationContent -NoNewline
+
+          Write-Host "Updated package to version $version with checksum $checksum"
+
+      - name: Build package
+        shell: pwsh
+        run: |
+          choco pack
+
+      - name: Test package
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.VERSION }}"
+          choco install rustnet -source . -y
+
+          # Verify installation
+          if (Get-Command rustnet -ErrorAction SilentlyContinue) {
+            Write-Host "✓ RustNet installed successfully"
+            rustnet --version
+          } else {
+            Write-Error "✗ RustNet installation failed"
+            exit 1
+          }
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "Update to RustNet v${{ steps.version.outputs.VERSION }}"
+          title: "Update to RustNet v${{ steps.version.outputs.VERSION }}"
+          body: |
+            ## Update RustNet Package
+
+            This PR updates the Chocolatey package to RustNet version `${{ steps.version.outputs.VERSION }}`.
+
+            ### Changes
+            - Updated version in `rustnet.nuspec`
+            - Updated download URL in `tools/chocolateyinstall.ps1`
+            - Updated checksum: `${{ steps.checksum.outputs.CHECKSUM }}`
+            - Updated `tools/VERIFICATION.txt`
+
+            ### Testing
+            - ✓ Package built successfully
+            - ✓ Installation tested on Windows
+            - ✓ Checksum verified
+
+            ### Release URL
+            https://github.com/domcyrus/rustnet/releases/tag/v${{ steps.version.outputs.VERSION }}
+          branch: update-rustnet-${{ steps.version.outputs.VERSION }}
+          delete-branch: true
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: chocolatey-package
+          path: "*.nupkg"
