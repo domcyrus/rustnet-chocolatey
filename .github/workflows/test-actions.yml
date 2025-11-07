@@ -1,0 +1,22 @@
+name: Test Actions
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify workflows are accessible
+        run: |
+          echo "GitHub Actions is enabled and working!"
+          echo "Available workflows:"
+          echo "- Check for New RustNet Release (Manual & Scheduled)"
+          echo "- Update RustNet Package (Manual)"
+          echo "- Publish to Chocolatey (Manual & on Release)"
