@@ -1,0 +1,112 @@
+name: Check for New RustNet Release
+
+on:
+  schedule:
+    # Check for new releases daily at 9 AM UTC
+    - cron: '0 9 * * *'
+  workflow_dispatch:
+
+jobs:
+  check-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get latest RustNet release
+        id: rustnet-release
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { data: release } = await github.rest.repos.getLatestRelease({
+              owner: 'domcyrus',
+              repo: 'rustnet'
+            });
+
+            const latestVersion = release.tag_name.replace(/^v/, '');
+            console.log(`Latest RustNet version: ${latestVersion}`);
+
+            return latestVersion;
+
+      - name: Get current package version
+        id: current-version
+        run: |
+          CURRENT_VERSION=$(grep -oP '<version>\K[\d\.]+' rustnet.nuspec)
+          echo "VERSION=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "Current package version: $CURRENT_VERSION"
+
+      - name: Compare versions
+        id: compare
+        run: |
+          LATEST="${{ steps.rustnet-release.outputs.result }}"
+          CURRENT="${{ steps.current-version.outputs.VERSION }}"
+
+          # Remove quotes from LATEST (comes from GitHub Script)
+          LATEST=$(echo $LATEST | tr -d '"')
+
+          echo "Latest: $LATEST"
+          echo "Current: $CURRENT"
+
+          if [ "$LATEST" != "$CURRENT" ]; then
+            echo "UPDATE_NEEDED=true" >> $GITHUB_OUTPUT
+            echo "NEW_VERSION=$LATEST" >> $GITHUB_OUTPUT
+            echo "New version available: $LATEST"
+          else
+            echo "UPDATE_NEEDED=false" >> $GITHUB_OUTPUT
+            echo "Package is up to date"
+          fi
+
+      - name: Trigger update workflow
+        if: steps.compare.outputs.UPDATE_NEEDED == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'update-package.yml',
+              ref: 'main',
+              inputs: {
+                version: '${{ steps.compare.outputs.NEW_VERSION }}'
+              }
+            });
+
+            console.log('Triggered update workflow for version ${{ steps.compare.outputs.NEW_VERSION }}');
+
+      - name: Create issue for new release
+        if: steps.compare.outputs.UPDATE_NEEDED == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const newVersion = '${{ steps.compare.outputs.NEW_VERSION }}';
+
+            // Check if issue already exists
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'new-release'
+            });
+
+            const existingIssue = issues.find(issue =>
+              issue.title.includes(newVersion)
+            );
+
+            if (!existingIssue) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `New RustNet release: v${newVersion}`,
+                body: `A new version of RustNet (v${newVersion}) has been detected.\n\n` +
+                      `The update workflow has been automatically triggered.\n\n` +
+                      `**Release URL:** https://github.com/domcyrus/rustnet/releases/tag/v${newVersion}\n\n` +
+                      `This issue will be automatically closed when the package is updated.`,
+                labels: ['new-release', 'automated']
+              });
+
+              console.log('Created issue for new release');
+            }
