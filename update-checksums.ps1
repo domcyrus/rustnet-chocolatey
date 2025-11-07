@@ -20,14 +20,14 @@ Set-Content -Path $nuspecPath -Value $nuspecContent -NoNewline
 # Update chocolateyinstall.ps1
 $installScriptPath = Join-Path $PSScriptRoot 'tools\chocolateyinstall.ps1'
 $installContent = Get-Content $installScriptPath -Raw
-$installContent = $installContent -replace 'releases/download/v[\d\.]+/', "releases/download/v$Version/"
+$installContent = $installContent -replace 'releases/download/v[\d\.]+/rustnet-v[\d\.]+-', "releases/download/v$Version/rustnet-v$Version-"
 $installContent = $installContent -replace "checksum64 = '[^']*'", "checksum64 = '$Checksum'"
 Set-Content -Path $installScriptPath -Value $installContent -NoNewline
 
 # Update VERIFICATION.txt
 $verificationPath = Join-Path $PSScriptRoot 'tools\VERIFICATION.txt'
 $verificationContent = Get-Content $verificationPath -Raw
-$verificationContent = $verificationContent -replace 'releases/download/v[\d\.]+/', "releases/download/v$Version/"
+$verificationContent = $verificationContent -replace 'releases/download/v[\d\.]+/rustnet-v[\d\.]+-', "releases/download/v$Version/rustnet-v$Version-"
 $verificationContent = $verificationContent -replace 'checksum64: [^\r\n]*', "checksum64: $Checksum"
 Set-Content -Path $verificationPath -Value $verificationContent -NoNewline
 

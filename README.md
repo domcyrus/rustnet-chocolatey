@@ -23,26 +23,31 @@ choco install rustnet -source . -y
 
 ## Building from Source
 
+**IMPORTANT**: Before building, you must update the SHA256 checksum. See [CHECKSUM-INSTRUCTIONS.md](CHECKSUM-INSTRUCTIONS.md) for details.
+
 1. Clone this repository
-2. Update version in `rustnet.nuspec`
-3. Update checksums in `tools/chocolateyinstall.ps1` and `tools/VERIFICATION.txt`
-4. Run `choco pack`
+2. Download the release binary and calculate its SHA256 checksum
+3. Update the checksum using the helper script or manually
+4. Run `choco pack` to build the package
 
 ### Updating to a New Version
 
-Use the provided PowerShell script to update the package:
-
 ```powershell
-# Calculate checksum for the new release
-$checksum = (Get-FileHash -Algorithm SHA256 rustnet-x86_64-pc-windows-msvc.zip).Hash
+# 1. Download the release binary
+Invoke-WebRequest -Uri "https://github.com/domcyrus/rustnet/releases/download/v0.15.0/rustnet-v0.15.0-x86_64-pc-windows-msvc.zip" -OutFile "rustnet.zip"
 
-# Update all files with new version and checksum
-.\update-checksums.ps1 -Version "0.2.0" -Checksum $checksum
+# 2. Calculate checksum
+$checksum = (Get-FileHash -Algorithm SHA256 rustnet.zip).Hash
 
-# Test the package locally
+# 3. Update all files with new version and checksum
+.\update-checksums.ps1 -Version "0.15.0" -Checksum $checksum
+
+# 4. Test the package locally
 choco pack
 choco install rustnet -source . -y
 ```
+
+For detailed instructions, see [CHECKSUM-INSTRUCTIONS.md](CHECKSUM-INSTRUCTIONS.md).
 
 ## Package Structure
 
