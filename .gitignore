@@ -1,0 +1,14 @@
+# Chocolatey build artifacts
+*.nupkg
+
+# Temp files
+*.tmp
+*.bak
+*~
+
+# Downloaded binaries
+tools/*.exe
+tools/*.zip
+tools/*.dll
+!tools/chocolatey*.ps1
+!tools/VERIFICATION.txt

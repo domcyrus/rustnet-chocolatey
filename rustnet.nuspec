@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>rustnet</id>
+    <version>0.1.0</version>
+    <packageSourceUrl>https://github.com/domcyrus/rustnet-chocolatey</packageSourceUrl>
+    <owners>domcyrus</owners>
+    <title>RustNet</title>
+    <authors>domcyrus</authors>
+    <projectUrl>https://github.com/domcyrus/rustnet</projectUrl>
+    <copyright>2024 domcyrus</copyright>
+    <licenseUrl>https://github.com/domcyrus/rustnet/blob/main/LICENSE</licenseUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <projectSourceUrl>https://github.com/domcyrus/rustnet</projectSourceUrl>
+    <docsUrl>https://github.com/domcyrus/rustnet#readme</docsUrl>
+    <bugTrackerUrl>https://github.com/domcyrus/rustnet/issues</bugTrackerUrl>
+    <tags>rustnet network monitoring tui cli rust npcap packet-capture admin</tags>
+    <summary>A network monitoring TUI application built with Rust</summary>
+    <description>
+RustNet is a Terminal User Interface (TUI) application for real-time network monitoring and packet analysis on Windows.
+
+## Features
+- Real-time network traffic monitoring
+- Terminal-based user interface
+- Packet capture and analysis
+- Network statistics and visualization
+
+## Requirements
+- Windows 10/11
+- Administrator privileges for packet capture
+- Npcap (automatically installed as dependency)
+
+## Usage
+After installation, run `rustnet` from the command line with administrator privileges to start monitoring network traffic.
+    </description>
+    <releaseNotes>https://github.com/domcyrus/rustnet/releases</releaseNotes>
+    <dependencies>
+      <dependency id="npcap" version="1.79" />
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>
