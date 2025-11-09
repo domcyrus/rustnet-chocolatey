@@ -12,7 +12,7 @@ Package can be verified like this:
    - Use powershell function 'Get-FileHash'
    - Use Chocolatey utility 'checksum.exe'
 
-   checksum64: TODO_UPDATE_CHECKSUM
+   checksum64: bd939a1f96d097254b9df243582c40c7e1543591c4dc18969d3025144d615111
 
 3. The license file (LICENSE) should be obtained from:
    https://github.com/domcyrus/rustnet/blob/main/LICENSE
