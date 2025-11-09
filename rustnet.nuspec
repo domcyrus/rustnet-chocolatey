@@ -28,15 +28,12 @@ RustNet is a Terminal User Interface (TUI) application for real-time network mon
 ## Requirements
 - Windows 10/11
 - Administrator privileges for packet capture
-- Npcap (automatically installed as dependency)
+- Npcap (must be installed separately from https://npcap.com)
 
 ## Usage
 After installation, run `rustnet` from the command line with administrator privileges to start monitoring network traffic.
     </description>
     <releaseNotes>https://github.com/domcyrus/rustnet/releases</releaseNotes>
-    <dependencies>
-      <dependency id="npcap" version="1.79" />
-    </dependencies>
   </metadata>
   <files>
     <file src="tools\**" target="tools" />
