@@ -4,13 +4,15 @@ This repository contains the Chocolatey package for [RustNet](https://github.com
 
 ## Installation
 
-### Step 1: Install Npcap (Required)
+### Step 1: Install Npcap Runtime (Required)
 
-Before installing RustNet, you must install Npcap for packet capture:
+Before installing RustNet, you must install Npcap Runtime for packet capture:
 
-1. Download Npcap from https://npcap.com/dist/
+1. Download the Npcap installer (e.g., `npcap-1.84.exe`) from https://npcap.com/dist/
 2. Run the installer
 3. **Important**: Select **"WinPcap API compatible mode"** during installation
+
+**Note**: Download the Npcap runtime installer, NOT the SDK. The SDK is only needed for building software.
 
 ### Step 2: Install RustNet
 
