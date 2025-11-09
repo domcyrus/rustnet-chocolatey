@@ -4,6 +4,16 @@ This repository contains the Chocolatey package for [RustNet](https://github.com
 
 ## Installation
 
+### Step 1: Install Npcap (Required)
+
+Before installing RustNet, you must install Npcap for packet capture:
+
+1. Download Npcap from https://npcap.com/dist/
+2. Run the installer
+3. **Important**: Select **"WinPcap API compatible mode"** during installation
+
+### Step 2: Install RustNet
+
 ```powershell
 # Once published to Chocolatey Community Repository
 choco install rustnet
@@ -15,11 +25,23 @@ choco pack
 choco install rustnet -source . -y
 ```
 
+### Step 3: Run RustNet
+
+```powershell
+# Run from Command Prompt or PowerShell
+rustnet
+
+# Note: Depending on your Npcap installation settings, you may or may not need
+# Administrator privileges. If you didn't select the option to restrict packet
+# capture to administrators during Npcap installation, RustNet can run with
+# normal user privileges.
+```
+
 ## Requirements
 
 - Windows 10/11
-- Administrator privileges (for packet capture)
-- Npcap (automatically installed as dependency)
+- Npcap installed in WinPcap API compatible mode
+- Administrator privileges (depending on Npcap configuration)
 
 ## Building from Source
 
