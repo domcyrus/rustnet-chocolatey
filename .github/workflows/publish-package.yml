@@ -34,7 +34,7 @@ jobs:
         shell: pwsh
         run: |
           # Install locally
-          choco install rustnet -source . -y
+          choco install rustnet -source "'.;https://community.chocolatey.org/api/v2/'" -y
 
           # Verify installation
           if (Get-Command rustnet -ErrorAction SilentlyContinue) {
