@@ -39,7 +39,8 @@ $exePath = Join-Path $toolsDir 'rustnet.exe'
 
 Write-Host "RustNet has been installed successfully!" -ForegroundColor Green
 Write-Host ""
-Write-Host "IMPORTANT: RustNet requires administrator privileges to capture network packets." -ForegroundColor Yellow
-Write-Host "Run 'rustnet' from an elevated command prompt to use the application." -ForegroundColor Yellow
+Write-Host "IMPORTANT: Npcap Runtime is required for packet capture." -ForegroundColor Yellow
+Write-Host "Download the Npcap installer (e.g., npcap-1.84.exe) from https://npcap.com/dist/" -ForegroundColor Cyan
+Write-Host "During installation, select 'WinPcap API compatible mode'" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "Note: Npcap is required for packet capture. Install it from https://npcap.com" -ForegroundColor Cyan
+Write-Host "After installing Npcap, run 'rustnet' from the command line." -ForegroundColor Green
