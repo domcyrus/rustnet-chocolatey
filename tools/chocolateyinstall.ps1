@@ -17,13 +17,25 @@ $packageArgs = @{
 # Download and extract the archive
 Install-ChocolateyZipPackage @packageArgs
 
-# Create a shim for the executable
-$exePath = Join-Path $toolsDir 'rustnet.exe'
+# Find the executable (it's inside a versioned folder)
+$extractedExe = Get-ChildItem -Path $toolsDir -Filter 'rustnet.exe' -Recurse | Select-Object -First 1
 
 # Verify the executable exists
-if (-not (Test-Path $exePath)) {
-  throw "RustNet executable not found at $exePath"
+if (-not $extractedExe) {
+  throw "RustNet executable not found in $toolsDir"
 }
+
+# Move executable and assets to tools directory root
+$extractedDir = $extractedExe.Directory.FullName
+Move-Item -Path (Join-Path $extractedDir 'rustnet.exe') -Destination $toolsDir -Force
+if (Test-Path (Join-Path $extractedDir 'assets')) {
+  Move-Item -Path (Join-Path $extractedDir 'assets') -Destination $toolsDir -Force
+}
+
+# Clean up extracted folder
+Remove-Item -Path $extractedDir -Recurse -Force -ErrorAction SilentlyContinue
+
+$exePath = Join-Path $toolsDir 'rustnet.exe'
 
 Write-Host "RustNet has been installed successfully!" -ForegroundColor Green
 Write-Host ""
