@@ -8,6 +8,7 @@
     <title>RustNet</title>
     <authors>domcyrus</authors>
     <projectUrl>https://github.com/domcyrus/rustnet</projectUrl>
+    <iconUrl>https://raw.githubusercontent.com/domcyrus/rustnet/main/resources/packaging/linux/graphics/rustnet.png</iconUrl>
     <copyright>2024 domcyrus</copyright>
     <licenseUrl>https://github.com/domcyrus/rustnet/blob/main/LICENSE</licenseUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
