@@ -11,7 +11,6 @@
     <copyright>2024 domcyrus</copyright>
     <licenseUrl>https://github.com/domcyrus/rustnet/blob/main/LICENSE</licenseUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
-    <projectSourceUrl>https://github.com/domcyrus/rustnet</projectSourceUrl>
     <docsUrl>https://github.com/domcyrus/rustnet#readme</docsUrl>
     <bugTrackerUrl>https://github.com/domcyrus/rustnet/issues</bugTrackerUrl>
     <tags>rustnet network monitoring tui cli rust npcap packet-capture admin</tags>
