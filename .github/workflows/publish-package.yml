@@ -39,7 +39,7 @@ jobs:
           # Verify installation
           if (Get-Command rustnet -ErrorAction SilentlyContinue) {
             Write-Host "✓ Package installed successfully"
-            rustnet --version
+            Write-Host "Note: Skipping version check (requires Npcap Runtime not available in CI)"
           } else {
             Write-Error "✗ Package installation failed"
             exit 1

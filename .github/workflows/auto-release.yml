@@ -1,0 +1,137 @@
+name: Auto-create Release
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+
+jobs:
+  create-release:
+    # Only run if PR was merged and branch matches update pattern
+    if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'update-rustnet-')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract version from branch name
+        id: version
+        run: |
+          BRANCH="${{ github.event.pull_request.head.ref }}"
+          # Extract version from branch name (update-rustnet-X.Y.Z -> X.Y.Z)
+          VERSION="${BRANCH#update-rustnet-}"
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "Extracted version: $VERSION"
+
+      - name: Create GitHub Release
+        uses: actions/github-script@v7
+        env:
+          VERSION: ${{ steps.version.outputs.VERSION }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const version = process.env.VERSION;
+            const prNumber = process.env.PR_NUMBER;
+            const tagName = `v${version}`;
+
+            // Check if release already exists
+            try {
+              const { data: release } = await github.rest.repos.getReleaseByTag({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                tag: tagName
+              });
+              console.log(`Release ${tagName} already exists, skipping creation`);
+              return;
+            } catch (error) {
+              if (error.status !== 404) {
+                throw error;
+              }
+              // Release doesn't exist, continue to create it
+            }
+
+            // Create the release
+            const releaseBody = [
+              `Updated Chocolatey package for RustNet v${version}`,
+              '',
+              '## Changes',
+              `- Updated package to RustNet v${version}`,
+              '- Updated binary checksums',
+              '- Package verification completed',
+              '',
+              `This release was automatically created after merging PR #${prNumber}.`,
+              '',
+              'The package will be automatically published to Chocolatey Community Repository.'
+            ].join('\n');
+
+            const { data: release } = await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: tagName,
+              name: `RustNet Chocolatey Package v${version}`,
+              body: releaseBody,
+              draft: false,
+              prerelease: false
+            });
+
+            console.log(`Created release: ${release.html_url}`);
+
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        env:
+          VERSION: ${{ steps.version.outputs.VERSION }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const version = process.env.VERSION;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `✓ Release \`v${version}\` has been automatically created and will trigger publishing to Chocolatey.`
+            });
+
+      - name: Close related issue
+        uses: actions/github-script@v7
+        env:
+          VERSION: ${{ steps.version.outputs.VERSION }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const version = process.env.VERSION;
+
+            // Find the issue created for this release
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'new-release'
+            });
+
+            const releaseIssue = issues.find(issue =>
+              issue.title.includes(version)
+            );
+
+            if (releaseIssue) {
+              // Close the issue with a comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: releaseIssue.number,
+                body: `✓ Package has been updated and release \`v${version}\` has been created.\n\nClosing this issue as the update is complete.`
+              });
+
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: releaseIssue.number,
+                state: 'closed'
+              });
+
+              console.log(`Closed issue #${releaseIssue.number}`);
+            } else {
+              console.log(`No open issue found for version ${version}`);
+            }
