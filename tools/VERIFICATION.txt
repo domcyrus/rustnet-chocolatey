@@ -6,13 +6,13 @@ Package can be verified like this:
 
 1. Download the following:
 
-   x64: https://github.com/domcyrus/rustnet/releases/download/v0.15.0/rustnet-v0.15.0-x86_64-pc-windows-msvc.zip
+   x64: https://github.com/domcyrus/rustnet/releases/download/v0.17.0/rustnet-v0.17.0-x86_64-pc-windows-msvc.zip
 
 2. You can use one of the following methods to obtain the SHA256 checksum:
    - Use powershell function 'Get-FileHash'
    - Use Chocolatey utility 'checksum.exe'
 
-   checksum64: bd939a1f96d097254b9df243582c40c7e1543591c4dc18969d3025144d615111
+   checksum64: 61a72b5e8d87177e911f40392d73b462237b596dc67acb928dd090f8e4d00d32
 
 3. The license file (LICENSE) should be obtained from:
    https://github.com/domcyrus/rustnet/blob/main/LICENSE

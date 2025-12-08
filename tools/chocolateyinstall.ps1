@@ -2,8 +2,8 @@ $ErrorActionPreference = 'Stop'
 
 $packageName = 'rustnet'
 $toolsDir = "$(Split-Path -parent $MyInvocation.MyCommand.Definition)"
-$url64 = 'https://github.com/domcyrus/rustnet/releases/download/v0.15.0/rustnet-v0.15.0-x86_64-pc-windows-msvc.zip'
-$checksum64 = 'bd939a1f96d097254b9df243582c40c7e1543591c4dc18969d3025144d615111'
+$url64 = 'https://github.com/domcyrus/rustnet/releases/download/v0.17.0/rustnet-v0.17.0-x86_64-pc-windows-msvc.zip'
+$checksum64 = '61a72b5e8d87177e911f40392d73b462237b596dc67acb928dd090f8e4d00d32'
 $checksumType64 = 'sha256'
 
 $packageArgs = @{
