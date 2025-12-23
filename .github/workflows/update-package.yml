@@ -71,13 +71,6 @@ jobs:
           $installContent = $installContent -replace "checksum64 = '[^']*'", "checksum64 = '$checksum'"
           Set-Content -Path $installScriptPath -Value $installContent -NoNewline
 
-          # Update VERIFICATION.txt
-          $verificationPath = "tools\VERIFICATION.txt"
-          $verificationContent = Get-Content $verificationPath -Raw
-          $verificationContent = $verificationContent -replace 'releases/download/v[\d\.]+/rustnet-v[\d\.]+-', "releases/download/v$version/rustnet-v$version-"
-          $verificationContent = $verificationContent -replace 'checksum64: [^\r\n]*', "checksum64: $checksum"
-          Set-Content -Path $verificationPath -Value $verificationContent -NoNewline
-
           Write-Host "Updated package to version $version with checksum $checksum"
 
       - name: Build package
@@ -116,7 +109,6 @@ jobs:
             - Updated version in `rustnet.nuspec`
             - Updated download URL in `tools/chocolateyinstall.ps1`
             - Updated checksum: `${{ steps.checksum.outputs.CHECKSUM }}`
-            - Updated `tools/VERIFICATION.txt`
 
             ### Testing
             - ✓ Package built successfully
