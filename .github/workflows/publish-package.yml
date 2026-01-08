@@ -9,6 +9,11 @@ on:
         description: 'Version to publish (e.g., 0.15.0)'
         required: true
         type: string
+      confirm_publish:
+        description: 'Confirm publish to Chocolatey Community Repository'
+        required: true
+        type: boolean
+        default: false
 
 jobs:
   publish:
@@ -49,7 +54,7 @@ jobs:
           choco uninstall rustnet -y
 
       - name: Push to Chocolatey Community Repository
-        if: github.event_name == 'release'
+        if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.confirm_publish)
         shell: pwsh
         env:
           CHOCO_API_KEY: ${{ secrets.CHOCO_API_KEY }}
