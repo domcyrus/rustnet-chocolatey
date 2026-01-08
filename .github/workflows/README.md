@@ -4,119 +4,97 @@ This directory contains automated workflows for maintaining the RustNet Chocolat
 
 ## Workflows
 
-### 1. Check for New Release (`check-new-release.yml`)
+### 1. Update Package (`update-package.yml`)
 
 **Trigger:**
-- Scheduled daily at 9 AM UTC
-- Manual dispatch
-
-**Purpose:** Automatically detects new RustNet releases and triggers the update workflow.
-
-**What it does:**
-1. Checks the domcyrus/rustnet repository for new releases
-2. Compares with the current package version
-3. If a new version is found:
-   - Triggers the update workflow
-   - Creates a GitHub issue to track the update
-
-**Manual trigger:**
-```bash
-gh workflow run check-new-release.yml
-```
-
----
-
-### 2. Update Package (`update-package.yml`)
-
-**Trigger:**
+- Automatically triggered by the main RustNet release workflow
 - Manual dispatch with version input
-- Triggered by `check-new-release.yml`
 
-**Purpose:** Updates the Chocolatey package to a specific RustNet version.
+**Purpose:** Updates the Chocolatey package to a new RustNet version.
 
 **What it does:**
 1. Downloads the Windows binary for the specified version
 2. Calculates the SHA256 checksum
-3. Updates all package files (nuspec, install script, verification)
-4. Builds and tests the package
-5. Creates a pull request with the changes
-6. Uploads the built package as an artifact
+3. Updates package files (nuspec, install script)
+4. Builds and tests the package locally
+5. Commits and pushes changes directly
+6. Optionally publishes to Chocolatey Community Repository
 
 **Manual trigger:**
 ```bash
-gh workflow run update-package.yml -f version=0.15.0
+gh workflow run update-package.yml -f version=0.19.0
 ```
 
-Or via the GitHub UI: Actions → Update RustNet Package → Run workflow
+With publishing enabled:
+```bash
+gh workflow run update-package.yml -f version=0.19.0 -f publish=true
+```
 
 **Parameters:**
-- `version`: RustNet version to update to (e.g., `0.15.0`)
+- `version`: RustNet version to update to (e.g., `v0.19.0` or `0.19.0`)
+- `publish`: Whether to publish to Chocolatey (default: false)
 
 ---
 
-### 3. Publish Package (`publish-package.yml`)
+### 2. Publish Package (`publish-package.yml`)
 
 **Trigger:**
-- When a GitHub release is published in this repository
-- Manual dispatch
+- Manual dispatch only
 
-**Purpose:** Publishes the Chocolatey package to the Chocolatey Community Repository.
+**Purpose:** Manually publishes the current package to Chocolatey Community Repository.
 
 **What it does:**
-1. Builds the Chocolatey package
+1. Builds the Chocolatey package from current files
 2. Tests installation locally
-3. Pushes to Chocolatey Community Repository (requires `CHOCO_API_KEY` secret)
-4. Uploads the package as an artifact
-5. Comments on the related PR with publication status
+3. Pushes to Chocolatey Community Repository
+
+**Manual trigger:**
+```bash
+gh workflow run publish-package.yml -f confirm_publish=true
+```
 
 **Setup Requirements:**
 
-To enable automatic publishing, add your Chocolatey API key as a repository secret:
+Add your Chocolatey API key as a repository secret:
 
 1. Go to: Settings → Secrets and variables → Actions
 2. Create a new secret named `CHOCO_API_KEY`
 3. Get your API key from: https://community.chocolatey.org/account
-4. Paste the key as the secret value
-
-**Manual trigger:**
-```bash
-gh workflow run publish-package.yml -f version=0.15.0
-```
 
 ---
 
-## Typical Update Flow
+## Update Flow
 
-### Automated Flow
+### Automated Flow (Recommended)
 
-1. **Daily Check** → `check-new-release.yml` runs automatically
-2. **New Version Detected** → Triggers `update-package.yml`
-3. **PR Created** → Review and merge the PR
-4. **Create Release** → Create a GitHub release with the version tag
-5. **Auto Publish** → `publish-package.yml` publishes to Chocolatey
+When a new RustNet release is created:
+
+1. **Tag Push** → Main rustnet release workflow runs
+2. **Trigger** → Automatically triggers `update-package.yml` in this repo
+3. **Update** → Package files are updated and committed
+4. **Publish** → Optionally publishes to Chocolatey (if configured)
 
 ### Manual Flow
 
-If you want to manually update to a specific version:
-
 ```bash
-# Option 1: Trigger the update workflow
-gh workflow run update-package.yml -f version=0.16.0
+# Update to a specific version
+gh workflow run update-package.yml -f version=0.19.0
 
-# Option 2: Use the PowerShell script locally
-.\update-checksums.ps1 -Version "0.16.0" -Checksum "abc123..."
-git add .
-git commit -m "Update to v0.16.0"
-git push
+# Update and publish in one step
+gh workflow run update-package.yml -f version=0.19.0 -f publish=true
+
+# Or publish the current version separately
+gh workflow run publish-package.yml -f confirm_publish=true
 ```
 
 ---
 
-## Monitoring
+## Required Secrets
 
-- **Workflow runs:** Actions tab in the repository
-- **Update issues:** Issues with the `new-release` label
-- **PR status:** Pull requests from `update-rustnet-*` branches
+| Secret | Repository | Purpose |
+|--------|-----------|---------|
+| `CHOCOLATEY_PAT` | domcyrus/rustnet | Trigger this workflow from release |
+| `CHOCO_API_KEY` | This repo | Publish to Chocolatey Community |
 
 ---
 
@@ -138,9 +116,3 @@ git push
 - Ensure `CHOCO_API_KEY` secret is set
 - Verify your API key is valid on chocolatey.org
 - Check for validation errors in the workflow logs
-
-### PR not created
-
-- Check that the GitHub token has write permissions
-- Verify no PR already exists for that version
-- Review the workflow logs for errors

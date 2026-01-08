@@ -21,7 +21,7 @@ Before installing RustNet, you must install Npcap Runtime for packet capture:
 - Or right-click PowerShell/Command Prompt in Start Menu → "Run as Administrator"
 
 ```powershell
-# Once published to Chocolatey Community Repository
+# Install from Chocolatey Community Repository
 choco install rustnet
 
 # Or install from source
@@ -69,37 +69,6 @@ If you encounter errors about lock file access or "access denied to lib-bad" dur
 - Npcap installed in WinPcap API compatible mode
 - Administrator privileges (depending on Npcap configuration)
 
-## Building from Source
-
-**IMPORTANT**: Before building, you must update the SHA256 checksum. See [CHECKSUM-INSTRUCTIONS.md](CHECKSUM-INSTRUCTIONS.md) for details.
-
-**Note**: `choco pack` (creating the package) can be run without admin privileges, but `choco install` requires administrator privileges.
-
-1. Clone this repository
-2. Download the release binary and calculate its SHA256 checksum
-3. Update the checksum using the helper script or manually
-4. Run `choco pack` to build the package (no admin needed)
-5. Run `choco install` with administrator privileges (see Installation section)
-
-### Updating to a New Version
-
-```powershell
-# 1. Download the release binary
-Invoke-WebRequest -Uri "https://github.com/domcyrus/rustnet/releases/download/v0.15.0/rustnet-v0.15.0-x86_64-pc-windows-msvc.zip" -OutFile "rustnet.zip"
-
-# 2. Calculate checksum
-$checksum = (Get-FileHash -Algorithm SHA256 rustnet.zip).Hash
-
-# 3. Update all files with new version and checksum
-.\update-checksums.ps1 -Version "0.15.0" -Checksum $checksum
-
-# 4. Test the package locally (pack doesn't need admin, install does)
-choco pack
-choco install rustnet -source . -y  # Run as Administrator
-```
-
-For detailed instructions, see [CHECKSUM-INSTRUCTIONS.md](CHECKSUM-INSTRUCTIONS.md).
-
 ## Package Structure
 
 ```
@@ -107,9 +76,10 @@ rustnet-chocolatey/
 ├── rustnet.nuspec              # Package specification
 ├── tools/
 │   ├── chocolateyinstall.ps1   # Installation script
-│   ├── chocolateyuninstall.ps1 # Uninstallation script
-│   └── VERIFICATION.txt        # Package verification info
-├── update-checksums.ps1        # Helper script for updates
+│   └── chocolateyuninstall.ps1 # Uninstallation script
+├── .github/workflows/
+│   ├── update-package.yml      # Automated package updates
+│   └── publish-package.yml     # Manual publish to Chocolatey
 └── README.md
 ```
 
@@ -117,9 +87,9 @@ rustnet-chocolatey/
 
 This repository includes GitHub Actions workflows that automate package maintenance:
 
-- **Daily Release Checks**: Automatically detects new RustNet releases
-- **Automated Updates**: Downloads binaries, calculates checksums, and creates PRs
-- **Automated Publishing**: Publishes to Chocolatey Community Repository on release
+- **Automatic Updates**: Triggered by the main RustNet release workflow
+- **Manual Updates**: Can be triggered with a specific version
+- **Publishing**: Can publish to Chocolatey Community Repository
 
 See [.github/workflows/README.md](.github/workflows/README.md) for details.
 
@@ -129,19 +99,31 @@ To manually update to a specific version:
 
 ```bash
 # Trigger via GitHub Actions
-gh workflow run update-package.yml -f version=0.16.0
+gh workflow run update-package.yml -f version=0.19.0
 
-# Or use the GitHub UI: Actions → Update RustNet Package → Run workflow
+# Update and publish in one step
+gh workflow run update-package.yml -f version=0.19.0 -f publish=true
+
+# Or use the GitHub UI: Actions → Update Chocolatey Package → Run workflow
 ```
 
 ## Publishing
 
-The package is automatically published to Chocolatey when a GitHub release is created in this repository.
+The package can be published to Chocolatey in two ways:
 
-**Setup for automatic publishing:**
+1. **During update**: Set `publish=true` when triggering the update workflow
+2. **Separately**: Use the publish workflow after updating
+
+**Setup for publishing:**
 1. Add `CHOCO_API_KEY` to repository secrets
 2. Get your API key from: https://community.chocolatey.org/account
-3. Create a release → Package publishes automatically
+
+## Required Secrets
+
+| Secret | Repository | Purpose |
+|--------|-----------|---------|
+| `CHOCOLATEY_PAT` | domcyrus/rustnet | Trigger updates from main release |
+| `CHOCO_API_KEY` | This repo | Publish to Chocolatey Community |
 
 ## License
 

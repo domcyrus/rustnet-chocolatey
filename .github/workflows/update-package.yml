@@ -1,127 +1,200 @@
-name: Update RustNet Package
+name: Update Chocolatey Package
 
 on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'RustNet version to update to (e.g., 0.15.0)'
+        description: 'RustNet version to update to (e.g., v0.18.0 or 0.18.0)'
         required: true
         type: string
-  repository_dispatch:
-    types: [new-release]
+      publish:
+        description: 'Publish to Chocolatey Community Repository'
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   update-package:
     runs-on: windows-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Determine version
+      - name: Get current package version
+        id: current
+        shell: pwsh
+        run: |
+          $currentVersion = ([xml](Get-Content rustnet.nuspec)).package.metadata.version
+          echo "version=$currentVersion" >> $env:GITHUB_OUTPUT
+          Write-Host "Current package version: v$currentVersion"
+
+      - name: Normalize version input
         id: version
         shell: pwsh
         run: |
-          if ("${{ github.event_name }}" -eq "workflow_dispatch") {
-            $version = "${{ github.event.inputs.version }}"
-          } else {
-            # For repository_dispatch, get version from payload
-            $version = "${{ github.event.client_payload.version }}"
-          }
+          # Strip 'v' prefix if provided (e.g., v0.18.0 -> 0.18.0)
+          $version = "${{ inputs.version }}" -replace '^v', ''
+          echo "version=$version" >> $env:GITHUB_OUTPUT
+          Write-Host "Target version: v$version"
 
-          # Remove 'v' prefix if present
-          $version = $version -replace '^v', ''
-
-          echo "VERSION=$version" >> $env:GITHUB_OUTPUT
-          echo "Updating to version: $version"
-
-      - name: Download release binary
+      - name: Check if update is needed
+        id: check
         shell: pwsh
         run: |
-          $version = "${{ steps.version.outputs.VERSION }}"
+          $current = "${{ steps.current.outputs.version }}"
+          $target = "${{ steps.version.outputs.version }}"
+
+          if ($current -eq $target) {
+            echo "needs_update=false" >> $env:GITHUB_OUTPUT
+            Write-Host "Package is already up to date (v$current)"
+          } else {
+            echo "needs_update=true" >> $env:GITHUB_OUTPUT
+            Write-Host "Update needed: v$current -> v$target"
+          }
+
+      - name: Download binary and calculate checksum
+        if: steps.check.outputs.needs_update == 'true'
+        id: checksum
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
           $url = "https://github.com/domcyrus/rustnet/releases/download/v$version/rustnet-v$version-x86_64-pc-windows-msvc.zip"
 
           Write-Host "Downloading from: $url"
           Invoke-WebRequest -Uri $url -OutFile "rustnet.zip"
 
-      - name: Calculate checksum
-        id: checksum
-        shell: pwsh
-        run: |
           $checksum = (Get-FileHash -Algorithm SHA256 rustnet.zip).Hash.ToLower()
-          echo "CHECKSUM=$checksum" >> $env:GITHUB_OUTPUT
+          echo "checksum=$checksum" >> $env:GITHUB_OUTPUT
           Write-Host "Calculated checksum: $checksum"
 
-      - name: Update package files
-        shell: pwsh
-        run: |
-          $version = "${{ steps.version.outputs.VERSION }}"
-          $checksum = "${{ steps.checksum.outputs.CHECKSUM }}"
+          # Clean up
+          Remove-Item rustnet.zip
 
-          # Update nuspec
+      - name: Update package files
+        if: steps.check.outputs.needs_update == 'true'
+        shell: pwsh
+        env:
+          CURRENT_VERSION: ${{ steps.current.outputs.version }}
+          NEW_VERSION: ${{ steps.version.outputs.version }}
+          CHECKSUM: ${{ steps.checksum.outputs.checksum }}
+        run: |
+          Write-Host "Updating package with:"
+          Write-Host "  Version: v$env:CURRENT_VERSION -> v$env:NEW_VERSION"
+          Write-Host "  Checksum: $env:CHECKSUM"
+
+          # Update nuspec version
           $nuspecPath = "rustnet.nuspec"
           $nuspecContent = Get-Content $nuspecPath -Raw
-          $nuspecContent = $nuspecContent -replace '<version>[\d\.]+</version>', "<version>$version</version>"
+          $nuspecContent = $nuspecContent -replace '<version>[\d\.]+</version>', "<version>$env:NEW_VERSION</version>"
           Set-Content -Path $nuspecPath -Value $nuspecContent -NoNewline
 
-          # Update chocolateyinstall.ps1
+          # Update chocolateyinstall.ps1 URL and checksum
           $installScriptPath = "tools\chocolateyinstall.ps1"
           $installContent = Get-Content $installScriptPath -Raw
-          $installContent = $installContent -replace 'releases/download/v[\d\.]+/rustnet-v[\d\.]+-', "releases/download/v$version/rustnet-v$version-"
-          $installContent = $installContent -replace "checksum64 = '[^']*'", "checksum64 = '$checksum'"
+          $installContent = $installContent -replace 'releases/download/v[\d\.]+/rustnet-v[\d\.]+-', "releases/download/v$env:NEW_VERSION/rustnet-v$env:NEW_VERSION-"
+          $installContent = $installContent -replace "checksum64 = '[^']*'", "checksum64 = '$env:CHECKSUM'"
           Set-Content -Path $installScriptPath -Value $installContent -NoNewline
 
-          Write-Host "Updated package to version $version with checksum $checksum"
+          Write-Host "Package files updated successfully"
+          Write-Host ""
+          Write-Host "Changes:"
+          git diff
 
       - name: Build package
+        if: steps.check.outputs.needs_update == 'true'
         shell: pwsh
         run: |
           choco pack
+          $nupkg = Get-ChildItem *.nupkg | Select-Object -First 1
+          Write-Host "Built package: $($nupkg.Name)"
 
-      - name: Test package
+      - name: Test package installation
+        if: steps.check.outputs.needs_update == 'true'
         shell: pwsh
         run: |
-          $version = "${{ steps.version.outputs.VERSION }}"
           choco install rustnet -source "'.;https://community.chocolatey.org/api/v2/'" -y
 
-          # Verify installation
           if (Get-Command rustnet -ErrorAction SilentlyContinue) {
-            Write-Host "✓ RustNet installed successfully"
-            Write-Host "Note: Skipping version check (requires Npcap Runtime not available in CI)"
-            exit 0
+            Write-Host "Package installed successfully"
+            Write-Host "Note: Skipping version check (requires Npcap Runtime)"
           } else {
-            Write-Error "✗ RustNet installation failed"
+            Write-Error "Package installation failed"
             exit 1
           }
 
-      - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "Update to RustNet v${{ steps.version.outputs.VERSION }}"
-          title: "Update to RustNet v${{ steps.version.outputs.VERSION }}"
-          body: |
-            ## Update RustNet Package
+          choco uninstall rustnet -y
 
-            This PR updates the Chocolatey package to RustNet version `${{ steps.version.outputs.VERSION }}`.
+      - name: Commit and push changes
+        if: steps.check.outputs.needs_update == 'true'
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
 
-            ### Changes
-            - Updated version in `rustnet.nuspec`
-            - Updated download URL in `tools/chocolateyinstall.ps1`
-            - Updated checksum: `${{ steps.checksum.outputs.CHECKSUM }}`
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
-            ### Testing
-            - ✓ Package built successfully
-            - ✓ Installation tested on Windows
-            - ✓ Checksum verified
+          git add rustnet.nuspec tools/chocolateyinstall.ps1
+          git commit -m "Update RustNet to version v$version"
+          git push
 
-            ### Release URL
-            https://github.com/domcyrus/rustnet/releases/tag/v${{ steps.version.outputs.VERSION }}
-          branch: update-rustnet-${{ steps.version.outputs.VERSION }}
-          delete-branch: true
+      - name: Publish to Chocolatey
+        if: steps.check.outputs.needs_update == 'true' && inputs.publish
+        shell: pwsh
+        env:
+          CHOCO_API_KEY: ${{ secrets.CHOCO_API_KEY }}
+        run: |
+          if ([string]::IsNullOrEmpty($env:CHOCO_API_KEY)) {
+            Write-Warning "CHOCO_API_KEY not set. Skipping publish."
+            Write-Host "To enable publishing, add CHOCO_API_KEY to repository secrets."
+            exit 0
+          }
 
-      - name: Upload package artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: chocolatey-package
-          path: "*.nupkg"
+          $nupkg = Get-ChildItem *.nupkg | Select-Object -First 1
+          Write-Host "Publishing $($nupkg.Name) to Chocolatey Community Repository..."
+
+          choco apikey --key $env:CHOCO_API_KEY --source https://push.chocolatey.org/
+          choco push $nupkg.Name --source https://push.chocolatey.org/
+
+          Write-Host "Package published successfully!"
+          Write-Host "Note: Moderator approval may take some time."
+
+      - name: Create summary
+        if: always()
+        shell: pwsh
+        run: |
+          $current = "${{ steps.current.outputs.version }}"
+          $target = "${{ steps.version.outputs.version }}"
+          $needsUpdate = "${{ steps.check.outputs.needs_update }}"
+          $checksum = "${{ steps.checksum.outputs.checksum }}"
+          $publish = "${{ inputs.publish }}"
+
+          @"
+          ### Chocolatey Package Update
+
+          - **Current Version:** v$current
+          - **Target Version:** v$target
+
+          "@ | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+
+          if ($needsUpdate -eq "true") {
+            @"
+          **Package Updated Successfully!**
+
+          - **New Version:** v$target
+          - **SHA256 Checksum:** ``$checksum``
+          - **Published to Chocolatey:** $(if ($publish -eq "true") { "Yes" } else { "No" })
+
+          **Validation:**
+          - Package built successfully
+          - Installation tested on Windows
+          "@ | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          } else {
+            @"
+          **No Update Needed**
+
+          The package is already at the target version.
+          "@ | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          }

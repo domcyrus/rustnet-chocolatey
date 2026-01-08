@@ -1,14 +1,8 @@
 name: Publish to Chocolatey
 
 on:
-  release:
-    types: [published]
   workflow_dispatch:
     inputs:
-      version:
-        description: 'Version to publish (e.g., 0.15.0)'
-        required: true
-        type: string
       confirm_publish:
         description: 'Confirm publish to Chocolatey Community Repository'
         required: true
@@ -17,15 +11,20 @@ on:
 
 jobs:
   publish:
+    if: inputs.confirm_publish
     runs-on: windows-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Chocolatey
+      - name: Get package version
+        id: version
+        shell: pwsh
         run: |
-          choco --version
+          $version = ([xml](Get-Content rustnet.nuspec)).package.metadata.version
+          echo "version=$version" >> $env:GITHUB_OUTPUT
+          Write-Host "Package version: v$version"
 
       - name: Build package
         shell: pwsh
@@ -38,77 +37,48 @@ jobs:
       - name: Test package locally
         shell: pwsh
         run: |
-          # Install locally
           choco install rustnet -source "'.;https://community.chocolatey.org/api/v2/'" -y
 
-          # Verify installation
           if (Get-Command rustnet -ErrorAction SilentlyContinue) {
-            Write-Host "✓ Package installed successfully"
-            Write-Host "Note: Skipping version check (requires Npcap Runtime not available in CI)"
+            Write-Host "Package installed successfully"
           } else {
-            Write-Error "✗ Package installation failed"
+            Write-Error "Package installation failed"
             exit 1
           }
 
-          # Uninstall for cleanup
           choco uninstall rustnet -y
 
       - name: Push to Chocolatey Community Repository
-        if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.confirm_publish)
         shell: pwsh
         env:
           CHOCO_API_KEY: ${{ secrets.CHOCO_API_KEY }}
         run: |
           if ([string]::IsNullOrEmpty($env:CHOCO_API_KEY)) {
-            Write-Warning "CHOCO_API_KEY not set. Skipping push to Chocolatey."
-            Write-Host "To enable automatic publishing, add CHOCO_API_KEY to repository secrets."
-            exit 0
+            Write-Error "CHOCO_API_KEY not set. Add it to repository secrets."
+            exit 1
           }
 
           $packageFile = $env:PACKAGE_FILE
           Write-Host "Publishing $packageFile to Chocolatey Community Repository..."
 
           choco apikey --key $env:CHOCO_API_KEY --source https://push.chocolatey.org/
-
           choco push $packageFile --source https://push.chocolatey.org/
 
-          Write-Host "✓ Package published successfully!"
-          Write-Host "Note: It may take some time for the package to be approved by moderators."
+          Write-Host "Package published successfully!"
+          Write-Host "Note: Moderator approval may take some time."
 
-      - name: Upload package artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: chocolatey-package
-          path: "*.nupkg"
+      - name: Create summary
+        if: always()
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
 
-      - name: Comment on PR
-        if: github.event_name == 'release'
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const version = '${{ github.event.release.tag_name }}'.replace(/^v/, '');
+          @"
+          ### Chocolatey Package Publish
 
-            // Find the update PR
-            const { data: prs } = await github.rest.pulls.list({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: 'closed',
-              sort: 'updated',
-              direction: 'desc'
-            });
+          - **Version:** v$version
+          - **Package:** $env:PACKAGE_FILE
+          - **Status:** Published to Chocolatey Community Repository
 
-            const updatePR = prs.find(pr =>
-              pr.title.includes(version) && pr.merged_at
-            );
-
-            if (updatePR) {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: updatePR.number,
-                body: `✓ Package for version ${version} has been published to Chocolatey Community Repository.\n\n` +
-                      `It may take some time for moderators to approve it.\n\n` +
-                      `**Release:** ${context.payload.release.html_url}`
-              });
-            }
+          Note: Moderator approval may take some time before the package is publicly available.
+          "@ | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
