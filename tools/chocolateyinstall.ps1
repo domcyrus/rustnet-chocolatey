@@ -44,3 +44,8 @@ Write-Host "Download the Npcap installer (e.g., npcap-1.84.exe) from https://npc
 Write-Host "During installation, select 'WinPcap API compatible mode'" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "After installing Npcap, run 'rustnet' from the command line." -ForegroundColor Green
+Write-Host ""
+Write-Host "GEOIP (OPTIONAL):" -ForegroundColor Yellow
+Write-Host "To show country codes for remote IPs, install GeoLite2 databases." -ForegroundColor Cyan
+Write-Host "Download geoipupdate from https://github.com/maxmind/geoipupdate/releases" -ForegroundColor Cyan
+Write-Host "See: https://github.com/domcyrus/rustnet/blob/main/INSTALL.md#geoip-databases-optional" -ForegroundColor Cyan
