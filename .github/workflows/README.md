@@ -22,16 +22,16 @@ This directory contains automated workflows for maintaining the RustNet Chocolat
 
 **Manual trigger:**
 ```bash
-gh workflow run update-package.yml -f version=0.19.0
+gh workflow run update-package.yml -f version=1.0.0
 ```
 
 With publishing enabled:
 ```bash
-gh workflow run update-package.yml -f version=0.19.0 -f publish=true
+gh workflow run update-package.yml -f version=1.0.0 -f publish=true
 ```
 
 **Parameters:**
-- `version`: RustNet version to update to (e.g., `v0.19.0` or `0.19.0`)
+- `version`: RustNet version to update to (e.g., `v1.0.0` or `1.0.0`)
 - `publish`: Whether to publish to Chocolatey (default: false)
 
 ---
@@ -78,10 +78,10 @@ When a new RustNet release is created:
 
 ```bash
 # Update to a specific version
-gh workflow run update-package.yml -f version=0.19.0
+gh workflow run update-package.yml -f version=1.0.0
 
 # Update and publish in one step
-gh workflow run update-package.yml -f version=0.19.0 -f publish=true
+gh workflow run update-package.yml -f version=1.0.0 -f publish=true
 
 # Or publish the current version separately
 gh workflow run publish-package.yml -f confirm_publish=true

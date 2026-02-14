@@ -99,10 +99,10 @@ To manually update to a specific version:
 
 ```bash
 # Trigger via GitHub Actions
-gh workflow run update-package.yml -f version=0.19.0
+gh workflow run update-package.yml -f version=1.0.0
 
 # Update and publish in one step
-gh workflow run update-package.yml -f version=0.19.0 -f publish=true
+gh workflow run update-package.yml -f version=1.0.0 -f publish=true
 
 # Or use the GitHub UI: Actions → Update Chocolatey Package → Run workflow
 ```
