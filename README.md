@@ -43,6 +43,21 @@ rustnet
 # normal user privileges.
 ```
 
+## GeoIP Databases (Optional)
+
+RustNet supports GeoIP lookups to show country codes, city names, and ASN information for remote IPs. This requires a free [MaxMind account](https://www.maxmind.com/en/geolite2/signup) and the `geoipupdate` tool:
+
+1. Download `geoipupdate` for Windows from https://github.com/maxmind/geoipupdate/releases
+2. Edit `%LOCALAPPDATA%\GeoIP\GeoIP.conf` with your MaxMind credentials and set:
+   ```
+   EditionIDs GeoLite2-City GeoLite2-ASN
+   ```
+3. Run `geoipupdate` to download the databases
+
+> **Tip:** `GeoLite2-City` is a superset of `GeoLite2-Country` — it provides city names and postal codes in addition to country data, so you only need one.
+
+See the [GeoIP setup guide](https://github.com/domcyrus/rustnet/blob/main/INSTALL.md#geoip-databases-optional) for full instructions.
+
 ## Troubleshooting
 
 ### "Unable to obtain lock file access" or "Access denied" errors

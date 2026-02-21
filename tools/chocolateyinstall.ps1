@@ -46,6 +46,11 @@ Write-Host ""
 Write-Host "After installing Npcap, run 'rustnet' from the command line." -ForegroundColor Green
 Write-Host ""
 Write-Host "GEOIP (OPTIONAL):" -ForegroundColor Yellow
-Write-Host "To show country codes for remote IPs, install GeoLite2 databases." -ForegroundColor Cyan
-Write-Host "Download geoipupdate from https://github.com/maxmind/geoipupdate/releases" -ForegroundColor Cyan
+Write-Host "To show country codes and city names for remote IPs, install GeoLite2 databases:" -ForegroundColor Cyan
+Write-Host "  1. Download geoipupdate from https://github.com/maxmind/geoipupdate/releases" -ForegroundColor Cyan
+Write-Host "  2. Sign up for a free MaxMind account at https://www.maxmind.com" -ForegroundColor Cyan
+Write-Host "  3. Edit %LOCALAPPDATA%\GeoIP\GeoIP.conf and set:" -ForegroundColor Cyan
+Write-Host "       EditionIDs GeoLite2-City GeoLite2-ASN" -ForegroundColor Cyan
+Write-Host "  4. Run: geoipupdate" -ForegroundColor Cyan
+Write-Host "  Tip: GeoLite2-City includes country data - no need for GeoLite2-Country." -ForegroundColor Cyan
 Write-Host "See: https://github.com/domcyrus/rustnet/blob/main/INSTALL.md#geoip-databases-optional" -ForegroundColor Cyan
