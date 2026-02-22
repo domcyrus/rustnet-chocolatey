@@ -6,6 +6,34 @@ $url64 = 'https://github.com/domcyrus/rustnet/releases/download/v1.0.0/rustnet-v
 $checksum64 = 'ed6694bcc8e1d2189419132ab80f8c4670b82f56379e523f0e3cdb87ffe7370f'
 $checksumType64 = 'sha256'
 
+# Check if Npcap is installed by looking for wpcap.dll
+$npcapInstalled = $false
+$systemRoot = $env:SystemRoot
+$wpcapPath = Join-Path $systemRoot 'System32\Npcap\wpcap.dll'
+$wpcapLegacyPath = Join-Path $systemRoot 'System32\wpcap.dll'
+
+if ((Test-Path $wpcapPath) -or (Test-Path $wpcapLegacyPath)) {
+    $npcapInstalled = $true
+}
+
+if (-not $npcapInstalled) {
+    Write-Host ""
+    Write-Host "WARNING: Npcap is not detected on this system." -ForegroundColor Yellow
+    Write-Host "RustNet requires Npcap for packet capture." -ForegroundColor Yellow
+    Write-Host "Download from: https://npcap.com/dist/" -ForegroundColor Cyan
+    Write-Host "IMPORTANT: Select 'WinPcap API-compatible Mode' during installation." -ForegroundColor Cyan
+    Write-Host ""
+
+    # Only prompt in interactive sessions (skip in CI/automated installs)
+    if ([Environment]::UserInteractive -and -not $env:CI) {
+        $response = Read-Host "Would you like to open the Npcap download page? [Y/n]"
+        if ($response -eq '' -or $response -match '^[Yy]') {
+            Start-Process "https://npcap.com/dist/"
+        }
+    }
+    Write-Host ""
+}
+
 $packageArgs = @{
   packageName    = $packageName
   unzipLocation  = $toolsDir
