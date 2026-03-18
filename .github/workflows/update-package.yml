@@ -44,14 +44,13 @@ jobs:
         id: check
         shell: pwsh
         run: |
+          # Always run: even if version matches, checksums may be stale
+          echo "needs_update=true" >> $env:GITHUB_OUTPUT
           $current = "${{ steps.current.outputs.version }}"
           $target = "${{ steps.version.outputs.version }}"
-
           if ($current -eq $target) {
-            echo "needs_update=false" >> $env:GITHUB_OUTPUT
-            Write-Host "Package is already up to date (v$current)"
+            Write-Host "Same version (v$current) — will verify checksum is correct"
           } else {
-            echo "needs_update=true" >> $env:GITHUB_OUTPUT
             Write-Host "Update needed: v$current -> v$target"
           }
 
@@ -103,6 +102,27 @@ jobs:
           Write-Host "Changes:"
           git diff
 
+      - name: Verify checksum matches release asset
+        if: steps.check.outputs.needs_update == 'true'
+        id: verify
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+          $expected = "${{ steps.checksum.outputs.checksum }}"
+          $url = "https://github.com/domcyrus/rustnet/releases/download/v$version/rustnet-v$version-x86_64-pc-windows-msvc.zip"
+
+          Write-Host "Re-downloading to verify checksum is stable..."
+          Invoke-WebRequest -Uri $url -OutFile "verify.zip"
+          $actual = (Get-FileHash -Algorithm SHA256 verify.zip).Hash.ToLower()
+          Remove-Item verify.zip
+
+          if ($actual -ne $expected) {
+            Write-Error "Checksum mismatch: expected $expected, got $actual"
+            Write-Error "Assets may have been replaced. Aborting to prevent pushing stale checksums."
+            exit 1
+          }
+          Write-Host "Checksum verified: $actual"
+
       - name: Build package
         if: steps.check.outputs.needs_update == 'true'
         shell: pwsh
@@ -137,8 +157,15 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           git add rustnet.nuspec tools/chocolateyinstall.ps1
-          git commit -m "Update RustNet to version v$version"
-          git push
+
+          # Only push if there are actual changes
+          $diff = git diff --cached --quiet; $hasChanges = $LASTEXITCODE -ne 0
+          if ($hasChanges) {
+            git commit -m "Update RustNet to version v$version"
+            git push
+          } else {
+            Write-Host "No checksum changes needed — package already correct"
+          }
 
       - name: Publish to Chocolatey
         if: steps.check.outputs.needs_update == 'true' && inputs.publish
