@@ -23,14 +23,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Get current package version
-        id: current
-        shell: pwsh
-        run: |
-          $currentVersion = ([xml](Get-Content rustnet.nuspec)).package.metadata.version
-          echo "version=$currentVersion" >> $env:GITHUB_OUTPUT
-          Write-Host "Current package version: v$currentVersion"
-
       - name: Normalize version input
         id: version
         shell: pwsh
@@ -38,7 +30,49 @@ jobs:
           # Strip 'v' prefix if provided (e.g., v0.18.0 -> 0.18.0)
           $version = "${{ inputs.version }}" -replace '^v', ''
           echo "version=$version" >> $env:GITHUB_OUTPUT
+          echo "tag=v$version" >> $env:GITHUB_OUTPUT
           Write-Host "Target version: v$version"
+
+      - name: Verify release is published and stable
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "${{ steps.version.outputs.tag }}"
+
+          # Check the release exists and is not a draft
+          $release = gh release view $tag --repo domcyrus/rustnet --json isDraft,tagName 2>&1
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "Release $tag not found in domcyrus/rustnet"
+            exit 1
+          }
+          $releaseData = $release | ConvertFrom-Json
+          if ($releaseData.isDraft) {
+            Write-Error "Release $tag is still a draft — assets may change. Wait for the release workflow to finish."
+            exit 1
+          }
+
+          # Check that no release workflow is currently running for this tag
+          $runs = gh run list --repo domcyrus/rustnet --workflow release.yml --json status,headBranch --limit 5 2>&1
+          if ($LASTEXITCODE -eq 0) {
+            $activeRuns = ($runs | ConvertFrom-Json) | Where-Object {
+              $_.headBranch -eq $tag -and $_.status -in @("in_progress", "queued", "waiting")
+            }
+            if ($activeRuns) {
+              Write-Error "Release workflow is still running for $tag. Wait for it to complete before updating the Chocolatey package."
+              exit 1
+            }
+          }
+
+          Write-Host "Release $tag is published and no release workflows are in progress."
+
+      - name: Get current package version
+        id: current
+        shell: pwsh
+        run: |
+          $currentVersion = ([xml](Get-Content rustnet.nuspec)).package.metadata.version
+          echo "version=$currentVersion" >> $env:GITHUB_OUTPUT
+          Write-Host "Current package version: v$currentVersion"
 
       - name: Check if update is needed
         id: check
