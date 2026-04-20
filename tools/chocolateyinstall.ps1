@@ -23,15 +23,6 @@ if (-not $npcapInstalled) {
     Write-Host "Download from: https://npcap.com/dist/" -ForegroundColor Cyan
     Write-Host "IMPORTANT: Select 'WinPcap API-compatible Mode' during installation." -ForegroundColor Cyan
     Write-Host ""
-
-    # Only prompt in interactive sessions (skip in CI/automated installs)
-    if ([Environment]::UserInteractive -and -not $env:CI) {
-        $response = Read-Host "Would you like to open the Npcap download page? [Y/n]"
-        if ($response -eq '' -or $response -match '^[Yy]') {
-            Start-Process "https://npcap.com/dist/"
-        }
-    }
-    Write-Host ""
 }
 
 $packageArgs = @{
