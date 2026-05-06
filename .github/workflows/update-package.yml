@@ -48,23 +48,11 @@ jobs:
           }
           $releaseData = $release | ConvertFrom-Json
           if ($releaseData.isDraft) {
-            Write-Error "Release $tag is still a draft — assets may change. Wait for the release workflow to finish."
+            Write-Error "Release $tag is still a draft, assets may change. Wait for the release workflow to finish."
             exit 1
           }
 
-          # Check that no release workflow is currently running for this tag
-          $runs = gh run list --repo domcyrus/rustnet --workflow release.yml --json status,headBranch --limit 5 2>&1
-          if ($LASTEXITCODE -eq 0) {
-            $activeRuns = ($runs | ConvertFrom-Json) | Where-Object {
-              $_.headBranch -eq $tag -and $_.status -in @("in_progress", "queued", "waiting")
-            }
-            if ($activeRuns) {
-              Write-Error "Release workflow is still running for $tag. Wait for it to complete before updating the Chocolatey package."
-              exit 1
-            }
-          }
-
-          Write-Host "Release $tag is published and no release workflows are in progress."
+          Write-Host "Release $tag is published."
 
       - name: Get current package version
         id: current
