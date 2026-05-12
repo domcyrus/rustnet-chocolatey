@@ -25,6 +25,13 @@ if (-not $npcapInstalled) {
     Write-Host ""
 }
 
+# On upgrade, Chocolatey restores the previous install's files into
+# $toolsDir before running this script. Those leftovers (a stale
+# rustnet.exe at the root and an assets\ folder) would poison the
+# recursive search below and cause the cleanup step to wipe $toolsDir.
+# Strip everything except the install/uninstall scripts before extracting.
+Get-ChildItem -Path $toolsDir -Force -Exclude 'chocolatey*.ps1' | Remove-Item -Recurse -Force
+
 $packageArgs = @{
   packageName    = $packageName
   unzipLocation  = $toolsDir
@@ -33,28 +40,30 @@ $packageArgs = @{
   checksumType64 = $checksumType64
 }
 
-# Download and extract the archive
 Install-ChocolateyZipPackage @packageArgs
 
-# Find the executable (it's inside a versioned folder)
-$extractedExe = Get-ChildItem -Path $toolsDir -Filter 'rustnet.exe' -Recurse | Select-Object -First 1
-
-# Verify the executable exists
-if (-not $extractedExe) {
-  throw "RustNet executable not found in $toolsDir"
+# The archive always extracts a single versioned subfolder. Match it
+# directly instead of recursively hunting for rustnet.exe — a recursive
+# search can match a leftover file at the tools root and turn the
+# cleanup below into a recursive delete of $toolsDir itself.
+$extractedDir = Get-ChildItem -Path $toolsDir -Directory -Filter 'rustnet-v*-pc-windows-msvc' | Select-Object -First 1
+if (-not $extractedDir) {
+  throw "Expected versioned subfolder (rustnet-v*-pc-windows-msvc) not found in $toolsDir after extraction"
+}
+if ($extractedDir.FullName -eq $toolsDir) {
+  throw "Refusing to operate: extracted directory resolved to `$toolsDir itself"
+}
+$exeSource = Join-Path $extractedDir.FullName 'rustnet.exe'
+if (-not (Test-Path $exeSource)) {
+  throw "rustnet.exe not found in extracted archive at $exeSource"
 }
 
-# Move executable and assets to tools directory root
-$extractedDir = $extractedExe.Directory.FullName
-Move-Item -Path (Join-Path $extractedDir 'rustnet.exe') -Destination $toolsDir -Force
-if (Test-Path (Join-Path $extractedDir 'assets')) {
-  Move-Item -Path (Join-Path $extractedDir 'assets') -Destination $toolsDir -Force
+Move-Item -Path $exeSource -Destination $toolsDir -Force
+if (Test-Path (Join-Path $extractedDir.FullName 'assets')) {
+  Move-Item -Path (Join-Path $extractedDir.FullName 'assets') -Destination $toolsDir -Force
 }
 
-# Clean up extracted folder
-Remove-Item -Path $extractedDir -Recurse -Force -ErrorAction SilentlyContinue
-
-$exePath = Join-Path $toolsDir 'rustnet.exe'
+Remove-Item -Path $extractedDir.FullName -Recurse -Force
 
 Write-Host "RustNet has been installed successfully!" -ForegroundColor Green
 Write-Host ""

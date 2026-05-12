@@ -153,19 +153,52 @@ jobs:
           $nupkg = Get-ChildItem *.nupkg | Select-Object -First 1
           Write-Host "Built package: $($nupkg.Name)"
 
-      - name: Test package installation
+      - name: Test package installation (clean install)
         if: steps.check.outputs.needs_update == 'true'
         shell: pwsh
         run: |
           choco install rustnet -source "'.;https://community.chocolatey.org/api/v2/'" -y
 
-          if (Get-Command rustnet -ErrorAction SilentlyContinue) {
-            Write-Host "Package installed successfully"
-            Write-Host "Note: Skipping version check (requires Npcap Runtime)"
-          } else {
-            Write-Error "Package installation failed"
+          if (-not (Get-Command rustnet -ErrorAction SilentlyContinue)) {
+            Write-Error "Package installation failed: rustnet not on PATH"
             exit 1
           }
+          $exe = "C:\ProgramData\chocolatey\lib\rustnet\tools\rustnet.exe"
+          if (-not (Test-Path $exe)) {
+            Write-Error "Clean install: rustnet.exe missing at $exe"
+            exit 1
+          }
+          Write-Host "Clean install OK (rustnet.exe present in tools/)"
+
+          choco uninstall rustnet -y
+
+      - name: Test package upgrade from previously-published version
+        if: steps.check.outputs.needs_update == 'true'
+        shell: pwsh
+        run: |
+          # Install the latest version currently on the community feed,
+          # then upgrade to the locally-built package. This catches the
+          # class of bug where leftover files from the previous install
+          # confuse the new install script (regression for the
+          # tools/-wipe bug fixed in 1.3.0.1).
+          choco install rustnet --source 'https://community.chocolatey.org/api/v2/' -y
+          if (-not (Test-Path 'C:\ProgramData\chocolatey\lib\rustnet\tools\rustnet.exe')) {
+            Write-Error "Setup failure: previously-published rustnet did not install cleanly"
+            exit 1
+          }
+
+          choco upgrade rustnet --source "'.;https://community.chocolatey.org/api/v2/'" -y --force
+
+          $exe = "C:\ProgramData\chocolatey\lib\rustnet\tools\rustnet.exe"
+          if (-not (Test-Path $exe)) {
+            Write-Error "Upgrade install: rustnet.exe missing at $exe (regression of tools/-wipe bug)"
+            exit 1
+          }
+          if (-not (Get-Command rustnet -ErrorAction SilentlyContinue)) {
+            Write-Error "Upgrade install: rustnet not on PATH"
+            exit 1
+          }
+          Write-Host "Upgrade install OK (rustnet.exe still present after upgrade)"
 
           choco uninstall rustnet -y
 
