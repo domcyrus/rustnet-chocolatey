@@ -2,8 +2,8 @@ $ErrorActionPreference = 'Stop'
 
 $packageName = 'rustnet'
 $toolsDir = "$(Split-Path -parent $MyInvocation.MyCommand.Definition)"
-$url64 = 'https://github.com/domcyrus/rustnet/releases/download/v1.5.0/rustnet-v1.5.0-x86_64-pc-windows-msvc.zip'
-$checksum64 = 'f233160488a62799cc0bbd7d0c8c61d9fe802570ba898592e3d094d8fc2cdde4'
+$url64 = 'https://github.com/domcyrus/rustnet/releases/download/v1.6.0/rustnet-v1.6.0-x86_64-pc-windows-msvc.zip'
+$checksum64 = '8a980df50472f00c69550dcfe53d46bfbbde81cc98d86680efe542c845578719'
 $checksumType64 = 'sha256'
 
 # Check if Npcap is installed by looking for wpcap.dll
