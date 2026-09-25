@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://raw.githubusercontent.com/domcyrus/rustnet/main/assets/rustnet.svg" alt="RustNet logo" width="96" height="96">
+</p>
+
 # RustNet Chocolatey Package
 
 This repository contains the Chocolatey package for [RustNet](https://github.com/domcyrus/rustnet), a network monitoring TUI application.
@@ -139,6 +143,14 @@ The package can be published to Chocolatey in two ways:
 |--------|-----------|---------|
 | `CHOCOLATEY_PAT` | domcyrus/rustnet | Trigger updates from main release |
 | `CHOCO_API_KEY` | This repo | Publish to Chocolatey Community |
+
+## Artwork
+
+The README logo and Chocolatey package icon are maintained in the
+[main RustNet repository](https://github.com/domcyrus/rustnet/tree/main/resources/packaging).
+The `iconUrl` in `rustnet.nuspec` already points to its Linux PNG, so artwork
+updates do not require a duplicate image or a package version bump here.
+The CLI package does not install a desktop shortcut.
 
 ## License
 
